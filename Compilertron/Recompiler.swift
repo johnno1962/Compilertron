@@ -21,11 +21,13 @@ class Recompiler: ObservableObject {
 
     func recompile(sourceFile: String) {
         guard let compilationCommand = commandCache[sourceFile] ??
-                findCompile(sourceFile: sourceFile) else { return }
+                log.flatMap({
+                    findCompile(sourceFile: sourceFile, log: $0) }) ??
+                FileWatcher.llvmLog.flatMap({
+                    findCompile(sourceFile: sourceFile, log: $0) })
+                else { return }
 //        print(compilationCommand)
 
-        let args = compilationCommand.components(separatedBy: " ")
-        guard let objectFile = args.last else { return }
         DispatchQueue.main.sync {
             active = "Compiling \(sourceFile)"
         }
@@ -38,6 +40,8 @@ class Recompiler: ObservableObject {
         }
         commandCache[sourceFile] = compilationCommand
 
+        let args = compilationCommand.components(separatedBy: " ")
+        guard let objectFile = args.last else { return }
         let clang = args[4]
         var sdk = URL(fileURLWithPath: clang)
         for _ in 0..<5 { sdk.deleteLastPathComponent() }
@@ -70,11 +74,7 @@ class Recompiler: ObservableObject {
         }
     }
 
-    func findCompile(sourceFile: String) -> String? {
-        guard let log = log else {
-            active = "Build log not available"
-            return nil
-        }
+    func findCompile(sourceFile: String, log: String) -> String? {
         DispatchQueue.main.sync {
             active = "Scanning for \(sourceFile)"
         }

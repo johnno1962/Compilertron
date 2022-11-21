@@ -27,6 +27,13 @@ public class FileWatcher: NSObject {
             UserDefaults.standard.set(derivedLog, forKey: logsPref)
         }
     }
+    static let llvmPref = "HotReloadingBuildLLVMDir"
+    static var llvmLog =
+        UserDefaults.standard.string(forKey: llvmPref) {
+        didSet {
+            UserDefaults.standard.set(derivedLog, forKey: llvmPref)
+        }
+    }
 
     var initStream: ((FSEventStreamEventId) -> Void)!
     var eventsStart =
@@ -89,9 +96,12 @@ public class FileWatcher: NSObject {
         for path in changes {
             guard let path = path as? String else { continue }
             if path.hasSuffix(".xcactivitylog") &&
-                path.contains("/Logs/Build/") &&
-                path.contains("Swift-") {
-                Self.derivedLog = path
+                path.contains("/Logs/Build/") {
+                if path.contains("/Swift-") {
+                    Self.derivedLog = path
+                } else if path.contains("/LLVM-") {
+                    Self.llvmLog = path
+                }
             }
             if eventId < eventsStart { continue }
 
