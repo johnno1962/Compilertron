@@ -21,8 +21,13 @@
 #include <vector>
 #include <string>
 
-#define ERROR(...) return fprintf(stderr, __FILE__ \
+#define ERROR(...) return fprintf(output, __FILE__ \
             " dyload_patches() error: " __VA_ARGS__)
+
+extern "C" {
+    char *__cxa_demangle(const char *symbol, char *out,
+                         size_t *length, int *status);
+}
 
 static time_t timeModified(const char *path) {
     struct stat s;
@@ -30,6 +35,7 @@ static time_t timeModified(const char *path) {
 }
 
 int dyload_patches() {
+    FILE *output = stderr;
     struct dl_info execInfo;
     void *main = dlsym(RTLD_SELF, "main");
     if (!main)
@@ -37,7 +43,7 @@ int dyload_patches() {
     if (!dladdr(main, &execInfo))
         ERROR("Could not locate main\n");
     time_t lastBuilt = timeModified(execInfo.dli_fname);
-    fprintf(stderr, "dyload_patches( %s )\n", execInfo.dli_fname);
+    fprintf(output, "dyload_patches( %s )\n", execInfo.dli_fname);
 
     FILE *patchDylibs = popen("ls -rt " COMPILERTRON_PATCHES, "r");
     if (!patchDylibs)
@@ -51,41 +57,54 @@ int dyload_patches() {
             continue;
         void *dlopenedPatch = dlopen(patchDylib, RTLD_NOW);
         if (!dlopenedPatch) {
-            fprintf(stderr, __FILE__ " dlopen %s failed %s\n",
+            fprintf(output, __FILE__ " dlopen %s failed %s\n",
                     patchDylib, dlerror());
             continue;
         }
 
-        auto nmCommand = std::string("nm '")+patchDylib+"' | grep 'T __Z'";
+        std::string dylibstr = patchDylib;
+        auto nmCommand = "nm '"+dylibstr+"' | grep 'T __Z'";
         FILE *interposableSymbols = popen(nmCommand.c_str(), "r");
         if (!interposableSymbols)
             ERROR("Could not extract syms %s\n", nmCommand.c_str());
-        std::vector<const char *> symbolNames;
+
+        struct interpose { char *name; void *applied; };
+        std::vector<struct interpose> symbolNames;
         while (const char *nmOutput =
                fgets(lineBuff, sizeof lineBuff, interposableSymbols)) {
             lineBuff[strlen(lineBuff)-1] = 0;
-            symbolNames.push_back(strdup(nmOutput + 20));
+            symbolNames.push_back({strdup(nmOutput + 20), nullptr});
         }
 
         auto interposes = (rebinding *)
             calloc(symbolNames.size(), sizeof(rebinding));
-        int ninterposes = 0;
-        for (auto name : symbolNames) {
-            interposes[ninterposes].name = name;
-            if (auto loaded = dlsym(dlopenedPatch, name))
+        int ninterposes = 0, napplied = 0;
+        for (auto &pair : symbolNames) {
+            interposes[ninterposes].name = pair.name;
+            interposes[ninterposes].replaced = &pair.applied;
+            if (auto loaded = dlsym(dlopenedPatch, pair.name))
                 interposes[ninterposes++].replacement = loaded;
             else
-                fprintf(stderr, __FILE__ "Could not lookup %s in %s\n",
-                        name, nmCommand.c_str());
+                fprintf(output,
+                        __FILE__ " Could not lookup %s in %s\n",
+                        pair.name, nmCommand.c_str());
         }
 
         rebind_symbols(interposes, ninterposes);
 
-        fprintf(stderr, "Patched %d symbols from: %s\n",
-                ninterposes, nmCommand.c_str());
+        bool log = getenv("LOG_INTERPOSES") != nullptr;
+        for (int i=0; i<ninterposes; i++)
+            if (*interposes[i].replaced && ++napplied && log)
+                fprintf(output, "  Interposed %s\n",
+                        __cxa_demangle(interposes[i].name,
+                                       nullptr, nullptr, nullptr));
 
-        for (auto name : symbolNames)
-            free((void *)name);
+        fprintf(output, "Patched %d/%d/%d symbols from: %s\n\n",
+                napplied, ninterposes, (int)symbolNames.size(),
+                dylibstr.c_str());
+
+        for (auto &pair : symbolNames)
+            free(pair.name);
         free(interposes);
         pclose(interposableSymbols);
     }
