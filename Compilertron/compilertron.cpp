@@ -21,66 +21,75 @@
 #include <vector>
 #include <string>
 
-static time_t mtime(const char *path) {
+#define ERROR(...) return fprintf(stderr, __FILE__ \
+            " dyload_patches() error: " __VA_ARGS__)
+
+static time_t timeModified(const char *path) {
     struct stat s;
     return stat(path, &s) == 0 ? s.st_mtimespec.tv_sec : 0;
 }
 
 int dyload_patches() {
-    struct dl_info info;
+    struct dl_info execInfo;
     void *main = dlsym(RTLD_SELF, "main");
     if (!main)
-        return fprintf(stderr, "!Could not lookup main\n");
-    if (!dladdr(main, &info))
-        return fprintf(stderr, "!Could not locate main\n");
-    time_t lastbuilt = mtime(info.dli_fname);
-    fprintf(stderr, "dyload_patches( %s )\n", info.dli_fname);
+        ERROR("Could not lookup main\n");
+    if (!dladdr(main, &execInfo))
+        ERROR("Could not locate main\n");
+    time_t lastBuilt = timeModified(execInfo.dli_fname);
+    fprintf(stderr, "dyload_patches( %s )\n", execInfo.dli_fname);
 
-    FILE *patches = popen("ls -rt " COMPILERTRON_PATCHES, "r");
-    if (!patches)
-        return fprintf(stderr, "!Could not load list patches\n");
-    char buffer[10*1024];
+    FILE *patchDylibs = popen("ls -rt " COMPILERTRON_PATCHES, "r");
+    if (!patchDylibs)
+        ERROR("Could not load list patches\n");
+    char lineBuff[10*1024];
 
-    while (fgets(buffer, sizeof buffer, patches)) {
-        buffer[strlen(buffer)-1] = 0;
-        if (mtime(buffer) < lastbuilt)
+    while (const char *patchDylib =
+           fgets(lineBuff, sizeof lineBuff, patchDylibs)) {
+        lineBuff[strlen(lineBuff)-1] = 0;
+        if (timeModified(patchDylib) < lastBuilt)
             continue;
-        void *handle = dlopen(buffer, RTLD_NOW);
-        if (!handle) {
-            fprintf(stderr, "!dlopen %s failed %s\n",
-                    buffer, dlerror());
+        void *dlopenedPatch = dlopen(patchDylib, RTLD_NOW);
+        if (!dlopenedPatch) {
+            fprintf(stderr, __FILE__ " dlopen %s failed %s\n",
+                    patchDylib, dlerror());
             continue;
         }
 
-        auto nm = std::string("nm ")+buffer+" | grep 'T __Z'";
-        FILE *syms = popen(nm.c_str(), "r");
-        if (!syms)
-            return fprintf(stderr, "!Could not extract syms %s\n", nm.c_str());
-        std::vector<const char *> symbols;
-        while (fgets(buffer, sizeof buffer, syms)) {
-            buffer[strlen(buffer)-1] = 0;
-            symbols.push_back(strdup(buffer+20));
+        auto nmCommand = std::string("nm '")+patchDylib+"' | grep 'T __Z'";
+        FILE *interposableSymbols = popen(nmCommand.c_str(), "r");
+        if (!interposableSymbols)
+            ERROR("Could not extract syms %s\n", nmCommand.c_str());
+        std::vector<const char *> symbolNames;
+        while (const char *nmOutput =
+               fgets(lineBuff, sizeof lineBuff, interposableSymbols)) {
+            lineBuff[strlen(lineBuff)-1] = 0;
+            symbolNames.push_back(strdup(nmOutput + 20));
         }
 
-        auto rebindings = (rebinding *)
-            calloc(symbols.size(), sizeof(rebinding));
-        int i = 0;
-        for (auto sym : symbols) {
-            rebindings[i].name = sym;
-            rebindings[i++].replacement = dlsym(handle, sym);
+        auto interposes = (rebinding *)
+            calloc(symbolNames.size(), sizeof(rebinding));
+        int ninterposes = 0;
+        for (auto name : symbolNames) {
+            interposes[ninterposes].name = name;
+            if (auto loaded = dlsym(dlopenedPatch, name))
+                interposes[ninterposes++].replacement = loaded;
+            else
+                fprintf(stderr, __FILE__ "Could not lookup %s in %s\n",
+                        name, nmCommand.c_str());
         }
 
-        rebind_symbols(rebindings, symbols.size());
+        rebind_symbols(interposes, ninterposes);
 
-        fprintf(stderr, "Patched %lu symbols from: %s\n",
-                symbols.size(), nm.c_str());
+        fprintf(stderr, "Patched %d symbols from: %s\n",
+                ninterposes, nmCommand.c_str());
 
-        for (auto sym : symbols)
-            free((void *)sym);
-        free(rebindings);
-        pclose(syms);
+        for (auto name : symbolNames)
+            free((void *)name);
+        free(interposes);
+        pclose(interposableSymbols);
     }
 
-    pclose(patches);
+    pclose(patchDylibs);
     return 0;
 }

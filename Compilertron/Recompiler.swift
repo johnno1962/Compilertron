@@ -70,7 +70,7 @@ class Recompiler: ObservableObject {
             """
         errs = popen(link, "r").output()
         DispatchQueue.main.sync {
-            active? += "\n\(errs)Done."
+            active? += "\n\(errs)Complete."
             state.log = nil
         }
     }

@@ -10,9 +10,11 @@ import SwiftUI
 struct ContentView: View {
     @ObservedObject var state: Recompiler
     var foreground: Color {
-        state.active?.contains("error:") == true ? .red :
+        state.active?.contains("error:") == true ||
+        state.active?.contains("failed") == true ? .red :
         state.active?.contains("Scanning ") == true ? .orange :
-        state.active?.contains("Done.") == false ? .green : .black }
+        state.active?.contains("Complete.") == false ? .green :
+        .black }
     init(state: Recompiler) {
         self.state = state
     }

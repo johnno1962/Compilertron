@@ -1,12 +1,15 @@
 
 ### Compilertron -- InjectionIII for working on the Swift compiler.
 
-Compilertron is a minimal implementation of the basics of
-the [InjectionIII](https://github.com/johnno1962/InjectionIII)
-app for use when working on the Swift compiler. In order
-to be able to do this, clone this repo to your sources
-directory at the same level as the `swift` project and
-make this patch to the swift project itself:
+Compilertron allows you to avoid having to wait for
+most builds of the swift-frontend executable while
+working on the compiler. It is a minimal
+implementation of the basic interposing functionality
+of the [InjectionIII](https://github.com/johnno1962/InjectionIII)
+app. In order to be able to use it, clone this repo 
+to your `swift-sources` directory at the same level
+as the `swift` project and make this patch to the
+swift project itself:
 
 ```
 diff --git a/lib/Frontend/CompilerInvocation.cpp b/lib/Frontend/CompilerInvocation.cpp
@@ -44,8 +47,8 @@ After this, if you run the macOS app in this repo, when you edit
 and save a .cpp source file the app greps though the last build log 
 of the `Swift.xcodeproj` to find how to recompile the source then
 links the resulting object file into a dynamic library. The next
-time you run a swift compiler patched as described above it will
-dynamically load the new implementation of the function edited
+time you run a swift compiler modified as described above it will
+dynamically load the new implementation of the function just edited
 instead of having to wait for the compiler to build again.
 
 This only works for functions or member function bodies of C++

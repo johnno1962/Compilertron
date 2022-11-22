@@ -33,7 +33,7 @@ struct CompilertronApp: App {
 public class CompilerWatcher: FileWatcher {
 
     static func findLog(which: String) -> String? {
-        guard let search = popen("ls -rt ~/Library/Developer/Xcode/DerivedData/\(which)-*/Logs/Build/*.xcactivitylog", "r") else { return nil }
+        guard let search = popen("ls -t ~/Library/Developer/Xcode/DerivedData/\(which)-*/Logs/Build/*.xcactivitylog", "r") else { return nil }
         defer { pclose(search) }
         return search.getLine()
     }
