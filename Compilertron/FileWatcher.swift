@@ -38,7 +38,7 @@ public class FileWatcher: NSObject {
     var initStream: ((FSEventStreamEventId) -> Void)!
     var eventsStart =
         FSEventStreamEventId(kFSEventStreamEventIdSinceNow)
-    var eventsToBackdate: UInt64 = 20_00000
+    var eventsToBackdate: UInt64 = 20_000
 
     var fileEvents: FSEventStreamRef! = nil
     var callback: InjectionCallback

@@ -12,11 +12,10 @@ let drives = ["/Volumes/Data2"]
 
 @main
 struct CompilertronApp: App {
-    let watcher = FileWatcher(roots: [NSHomeDirectory()] + drives,
-                              callback: { filesChanged, _ in
+    let watcher = CompilerWatcher(roots: [NSHomeDirectory()] + drives,
+                                  callback: { filesChanged, _ in
         for file in filesChanged as! [String] {
             if file.hasSuffix(".cpp") {
-                state.log = FileWatcher.derivedLog
                 state.queue.async {
                     state.recompile(sourceFile: file)
                 }
@@ -28,5 +27,22 @@ struct CompilertronApp: App {
         WindowGroup {
             ContentView(state: state)
         }
+    }
+}
+
+public class CompilerWatcher: FileWatcher {
+
+    static func findLog(which: String) -> String? {
+        guard let search = popen("ls -rt ~/Library/Developer/Xcode/DerivedData/\(which)-*/Logs/Build/*.xcactivitylog", "r") else { return nil }
+        defer { pclose(search) }
+        return search.getLine()
+    }
+
+    @objc public override init(roots: [String], callback: @escaping InjectionCallback) {
+
+        FileWatcher.derivedLog = Self.findLog(which: "Swift")
+        FileWatcher.llvmLog = Self.findLog(which: "LLVM")
+
+        super.init(roots: roots, callback: callback)
     }
 }

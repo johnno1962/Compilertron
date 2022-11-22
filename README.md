@@ -62,3 +62,14 @@ flag in combination with facebook's incredibly handy
 [fishhook](https://github.com/facebook/fishhook). The licensing
 details for this library are in the `fishhook.cpp` file and header.
 Details on how this works are laid out in detail [here](https://www.mikeash.com/pyblog/friday-qa-2012-11-09-dyld-dynamic-linking-on-os-x.html).
+
+The UI is as limited as my SwiftUI skills. In essence
+when it is idle it starts out with black text, which
+turns orange when a file has ben modified and it is
+searching logs for the compile command, then green
+during re-compilation then back to black when the
+dynamic library has been built. It will display text
+in red if there is an error while compiling the
+modified source.
+
+$Date: 2022/11/22 $

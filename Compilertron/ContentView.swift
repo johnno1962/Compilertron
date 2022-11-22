@@ -9,7 +9,10 @@ import SwiftUI
 
 struct ContentView: View {
     @ObservedObject var state: Recompiler
-    var foreground: Color { state.log != nil ? .black : .blue }
+    var foreground: Color {
+        state.active?.contains("error:") == true ? .red :
+        state.active?.contains("Scanning ") == true ? .orange :
+        state.active?.contains("Done.") == false ? .green : .black }
     init(state: Recompiler) {
         self.state = state
     }
@@ -19,7 +22,6 @@ struct ContentView: View {
                 Text(active)
             } else {
                 Text("Hello, world!")
-                    .foregroundColor(.black)
             }
             if let log = state.log {
                 Text("Log: \(log)")

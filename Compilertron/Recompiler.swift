@@ -21,7 +21,7 @@ class Recompiler: ObservableObject {
 
     func recompile(sourceFile: String) {
         guard let compilationCommand = commandCache[sourceFile] ??
-                log.flatMap({
+                FileWatcher.derivedLog.flatMap({
                     findCompile(sourceFile: sourceFile, log: $0) }) ??
                 FileWatcher.llvmLog.flatMap({
                     findCompile(sourceFile: sourceFile, log: $0) })
@@ -33,6 +33,7 @@ class Recompiler: ObservableObject {
         }
         var errs = popen(compilationCommand+" 2>&1", "r").output()
         guard !errs.contains("error:") else {
+            commandCache[sourceFile] = nil
             DispatchQueue.main.sync {
                 active? += "\n"+errs
             }
@@ -62,14 +63,14 @@ class Recompiler: ObservableObject {
             active? += "\nLinking to \(dylib.path)"
         }
         let link = """
-            \(clang) \(args[target]) \(args[target+1]) \
+            "\(clang)" \(args[target]) \(args[target+1]) \
             -Xlinker -dylib -isysroot "\(sdk.path)" \
             "\(objectFile)" -o "\(dylib.path)" \
             -undefined dynamic_lookup 2>&1
             """
         errs = popen(link, "r").output()
         DispatchQueue.main.sync {
-            active? += errs != "" ? "\n"+errs : "\nDone."
+            active? += "\n\(errs)Done."
             state.log = nil
         }
     }
@@ -77,6 +78,7 @@ class Recompiler: ObservableObject {
     func findCompile(sourceFile: String, log: String) -> String? {
         DispatchQueue.main.sync {
             active = "Scanning for \(sourceFile)"
+            state.log = log
         }
         let unzipLogs = """
             gunzip <\(log) | tr '\\r' '\\n' | grep ' -c \(sourceFile) '
@@ -84,7 +86,7 @@ class Recompiler: ObservableObject {
         guard let grep = popen(unzipLogs, "r"),
               let compilationCommand = grep.getLine() else {
             DispatchQueue.main.sync {
-                active = "Scan failed for \(sourceFile)"
+                active = "Scan failed for \(sourceFile)\n\(unzipLogs)"
             }
             return nil
         }
@@ -126,7 +128,7 @@ extension UnsafeMutablePointer where Pointee == FILE {
     func output() -> String {
         var out = ""
         while let line = getLine() {
-            out += line
+            out += line+"\n"
         }
         pclose(self)
         return out
