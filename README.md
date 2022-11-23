@@ -56,7 +56,7 @@ classes. You cannot alter headers or the memory layout of
 classes over a patch but you can iterate of the implementation
 of a function body without having to do a full rebuild. To launch
 the compiler in Xcode without having to wait for the rebuild,
-hold the control button as you launch the app.
+hold the control button as you launch swift-frontend to debug.
 
 Compilertron uses `interpossing`, a feature related to dynamic
 linking that allows you to modify the destination of all calls
@@ -75,4 +75,4 @@ dynamic library has been built. It will display text
 in red if there is an error while compiling the
 modified source.
 
-$Date: 2022/11/22 $
+$Date: 2022/11/23 $

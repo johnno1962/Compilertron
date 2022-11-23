@@ -36,27 +36,27 @@ static time_t timeModified(const char *path) {
 
 int dyload_patches() {
     FILE *output = stderr;
-    struct dl_info execInfo;
     void *main = dlsym(RTLD_SELF, "main");
     if (!main)
         ERROR("Could not lookup main\n");
+    struct dl_info execInfo;
     if (!dladdr(main, &execInfo))
         ERROR("Could not locate main\n");
     time_t lastBuilt = timeModified(execInfo.dli_fname);
-    fprintf(output, "dyload_patches( %s )\n", execInfo.dli_fname);
 
+    fprintf(output, "dyload_patches( %s )\n", execInfo.dli_fname);
     FILE *patchDylibs = popen("ls -rt " COMPILERTRON_PATCHES, "r");
     if (!patchDylibs)
-        ERROR("Could not load list patches\n");
-    char lineBuff[10*1024];
+        ERROR("Could not list patches\n");
+    static char lineBuff[100*1024];
 
     while (const char *patchDylib =
            fgets(lineBuff, sizeof lineBuff, patchDylibs)) {
         lineBuff[strlen(lineBuff)-1] = 0;
         if (timeModified(patchDylib) < lastBuilt)
             continue;
-        void *dlopenedPatch = dlopen(patchDylib, RTLD_NOW);
-        if (!dlopenedPatch) {
+        void *dylilbHandle = dlopen(patchDylib, RTLD_NOW);
+        if (!dylilbHandle) {
             fprintf(output, __FILE__ " dlopen %s failed %s\n",
                     patchDylib, dlerror());
             continue;
@@ -69,20 +69,20 @@ int dyload_patches() {
             ERROR("Could not extract syms %s\n", nmCommand.c_str());
 
         struct interpose { char *name; void *applied; };
-        std::vector<struct interpose> symbolNames;
+        std::vector<struct interpose> dylibSymbols;
         while (const char *nmOutput =
                fgets(lineBuff, sizeof lineBuff, interposableSymbols)) {
             lineBuff[strlen(lineBuff)-1] = 0;
-            symbolNames.push_back({strdup(nmOutput + 20), nullptr});
+            dylibSymbols.push_back({strdup(nmOutput + 20), nullptr});
         }
 
         auto interposes = (rebinding *)
-            calloc(symbolNames.size(), sizeof(rebinding));
+            calloc(dylibSymbols.size(), sizeof(rebinding));
         int ninterposes = 0, napplied = 0;
-        for (auto &pair : symbolNames) {
+        for (auto &pair : dylibSymbols) {
             interposes[ninterposes].name = pair.name;
             interposes[ninterposes].replaced = &pair.applied;
-            if (auto loaded = dlsym(dlopenedPatch, pair.name))
+            if (auto loaded = dlsym(dylilbHandle, pair.name))
                 interposes[ninterposes++].replacement = loaded;
             else
                 fprintf(output,
@@ -100,10 +100,10 @@ int dyload_patches() {
                                        nullptr, nullptr, nullptr));
 
         fprintf(output, "Patched %d/%d/%d symbols from: %s\n\n",
-                napplied, ninterposes, (int)symbolNames.size(),
+                napplied, ninterposes, (int)dylibSymbols.size(),
                 dylibstr.c_str());
 
-        for (auto &pair : symbolNames)
+        for (auto &pair : dylibSymbols)
             free(pair.name);
         free(interposes);
         pclose(interposableSymbols);

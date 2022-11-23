@@ -30,16 +30,17 @@ struct CompilertronApp: App {
     }
 }
 
-public class CompilerWatcher: FileWatcher {
+class CompilerWatcher: FileWatcher {
 
     static func findLog(which: String) -> String? {
         guard let search = popen("ls -t ~/Library/Developer/Xcode/DerivedData/\(which)-*/Logs/Build/*.xcactivitylog", "r") else { return nil }
         defer { pclose(search) }
-        return search.getLine()
+        return search.readLine()
     }
 
-    @objc public override init(roots: [String], callback: @escaping InjectionCallback) {
+    @objc override init(roots: [String], callback: @escaping InjectionCallback) {
 
+        // More robust means of finding build logs.
         FileWatcher.derivedLog = Self.findLog(which: "Swift")
         FileWatcher.llvmLog = Self.findLog(which: "LLVM")
 

@@ -15,9 +15,7 @@ struct ContentView: View {
         state.active?.contains("Scanning ") == true ? .orange :
         state.active?.contains("Complete.") == false ? .green :
         .black }
-    init(state: Recompiler) {
-        self.state = state
-    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             if let active = state.active {

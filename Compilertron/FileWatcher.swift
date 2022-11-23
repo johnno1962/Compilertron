@@ -19,7 +19,6 @@ public class FileWatcher: NSObject {
         _ filesChanged: NSArray, _ ideProcPath: String) -> Void
     static var INJECTABLE_PATTERN = try! NSRegularExpression(
         pattern: "[^~]\\.(mm?|cpp|swift|storyboard|xib)$")
-    let a = 1
     static let logsPref = "HotReloadingBuildLogsDir"
     static var derivedLog =
         UserDefaults.standard.string(forKey: logsPref) {
@@ -51,11 +50,8 @@ public class FileWatcher: NSObject {
         initStream = { [weak self] since in
             guard let self = self else { return }
             let fileEvents = FSEventStreamCreate(kCFAllocatorDefault,
-             { (streamRef: FSEventStreamRef,
-                clientCallBackInfo: UnsafeMutableRawPointer?,
-                numEvents: Int, eventPaths: UnsafeMutableRawPointer,
-                eventFlags: UnsafePointer<FSEventStreamEventFlags>,
-                eventIds: UnsafePointer<FSEventStreamEventId>) in
+             { (streamRef, clientCallBackInfo, numEvents,
+                eventPaths, eventFlags, eventIds) in
                  let watcher = unsafeBitCast(clientCallBackInfo, to: FileWatcher.self)
                  // Check that the event flags include an item renamed flag, this helps avoid
                  // unnecessary injection, such as triggering injection when switching between
