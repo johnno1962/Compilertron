@@ -6,7 +6,7 @@
 //
 //  Stub of code to be #inlucded into the Swift compiler
 //  which loads the dynamic libraries prepared by the app
-//  and interposes their new imlementations into place.
+//  and interposes their new implementations into place.
 //  For this to work you need to have linked the compiler
 //  with "Other Linker Flags": `-Xlinker -interposable`.
 //

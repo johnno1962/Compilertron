@@ -12,6 +12,7 @@
 //
 
 import SwiftUI
+import Cocoa
 
 class Recompiler: ObservableObject {
     @Published var log: String?
@@ -29,11 +30,13 @@ class Recompiler: ObservableObject {
 
         DispatchQueue.main.sync {
             active = "Compiling \(sourceFile)"
+            NSApp.dockTile.badgeLabel = "🍿"
         }
         let errs = popen(compilationCommand+" 2>&1", "r").readAll()
         guard !errs.contains("error:") else {
             commandCache[sourceFile] = nil
             DispatchQueue.main.sync {
+                NSApp.dockTile.badgeLabel = "🤷"
                 active? += "\n"+errs
             }
             return
@@ -75,6 +78,7 @@ class Recompiler: ObservableObject {
             """
         let errs = popen(linkCommand, "r").readAll()
         DispatchQueue.main.sync {
+            NSApp.dockTile.badgeLabel = nil
             active? += "\n\(errs)Complete."
             state.log = nil
         }
@@ -122,6 +126,7 @@ extension UnsafeMutablePointer:
     func readLine(strippingNewline: Bool = true) -> String? {
         var bufferSize = 10_000, offset = 0
         var buffer = [CChar](repeating: 0, count: bufferSize)
+
         while let line = fgets(&buffer[offset],
             Int32(buffer.count-offset), self) {
             offset += strlen(line)
@@ -137,7 +142,8 @@ extension UnsafeMutablePointer:
             strcpy(&grown, buffer)
             buffer = grown
         }
-        return nil
+
+        return offset > 0 ? String(cString: buffer) : nil
     }
 
     func readAll() -> String {

@@ -38,18 +38,21 @@ index c2ac2ebdb421a..237916675faa5 100644
 +
    if (Args.empty())
      return false;
- ```
+```
 
 You will also need to add `-Xlinker -interposable` to the 
 `"Other Linker Flags"` of the `swift-frontend` target and rebuild.
 
 After this, if you run the macOS app in this repo, when you edit
 and save a .cpp source file the app greps though the last build log 
-of the `Swift.xcodeproj` to find how to recompile the source then
-links the resulting object file into a dynamic library. The next
-time you run a swift compiler modified as described above it will
-dynamically load the new implementation of the function just edited
-instead of having to wait for the compiler to build again.
+of the `Swift.xcodeproj` (or `LLVM.xcodeproj`) to find how to
+recompile the source, then links the resulting object file into a
+dynamic library. The next time you run a swift compiler modified as
+described above it will dynamically load the new implementation of the
+function just edited instead of having to wait for the compiler to
+build again. You can patch multiple files in this way and they will be
+loaded separately. Somehow, LLDB is able to correctly set
+debugger breakpoints in the dynamically loaded code.
 
 This only works for functions or member function bodies of C++
 classes. You cannot alter headers or the memory layout of
@@ -75,4 +78,4 @@ dynamic library has been built. It will display text
 in red if there is an error while compiling the
 modified source.
 
-$Date: 2022/11/23 $
+$Date: 2022/11/24 $
