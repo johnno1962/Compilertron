@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import Popen
 
 let state = Recompiler()
 let drives = ["/Volumes/Data2"]
@@ -34,7 +35,7 @@ class CompilerWatcher: FileWatcher {
 
     static func findLog(which: String) -> String? {
         guard let search = popen("ls -t ~/Library/Developer/Xcode/DerivedData/\(which)-*/Logs/Build/*.xcactivitylog", "r") else { return nil }
-        defer { pclose(search) }
+        defer { _ = pclose(search) }
         return search.readLine()
     }
 
