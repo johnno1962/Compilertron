@@ -1,0 +1,14 @@
+{
+  "pins" : [
+    {
+      "identity" : "popen",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/johnno1962/Popen",
+      "state" : {
+        "branch" : "main",
+        "revision" : "dbe2c7eda328c50d1961c5179a822e74cb54c1cb"
+      }
+    }
+  ],
+  "version" : 2
+}

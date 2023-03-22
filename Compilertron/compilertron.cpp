@@ -12,7 +12,7 @@
 //
 
 #include "compilertron.hpp"
-#include "fishhook.cpp"
+#include <mach-o/dyld.h>
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <string.h>
@@ -20,6 +20,9 @@
 #include <stdio.h>
 #include <vector>
 #include <string>
+#include <map>
+
+#include "fishhook.cpp"
 
 #define ERROR(...) return fprintf(output, __FILE__ \
             " dyload_patches() error: " __VA_ARGS__)
@@ -49,18 +52,33 @@ int dyload_patches() {
     if (!patchDylibs)
         ERROR("Could not list patches\n");
     static char lineBuff[100*1024];
+    std::map<std::string, void *> previous;
 
     while (const char *patchDylib =
            fgets(lineBuff, sizeof lineBuff, patchDylibs)) {
         lineBuff[strlen(lineBuff)-1] = 0;
         if (timeModified(patchDylib) < lastBuilt)
             continue;
+
+        auto lastImage = _dyld_image_count();
         void *dylilbHandle = dlopen(patchDylib, RTLD_NOW);
         if (!dylilbHandle) {
             fprintf(output, __FILE__ " dlopen %s failed %s\n",
                     patchDylib, dlerror());
             continue;
         }
+
+        std::vector<rebinding> interposes;
+        int ninterposes = 0, napplied = 0;
+        for (auto &pair : previous) {
+            interposes[ninterposes].name = pair.first.c_str();
+            interposes[ninterposes].replacement = pair.second;
+            interposes[ninterposes++].replaced = nullptr;
+        }
+
+        rebind_symbols_image((void *)_dyld_get_image_header(lastImage),
+                             _dyld_get_image_vmaddr_slide(lastImage),
+                             interposes.data(), ninterposes);
 
         std::string dylibstr = patchDylib;
         auto nmCommand = "nm '"+dylibstr+"' | grep 'T __Z'";
@@ -76,23 +94,24 @@ int dyload_patches() {
             dylibSymbols.push_back({strdup(nmOutput + 20), nullptr});
         }
 
-        auto interposes = (rebinding *)
-            calloc(dylibSymbols.size(), sizeof(rebinding));
-        int ninterposes = 0, napplied = 0;
+        ninterposes = 0;
         for (auto &pair : dylibSymbols) {
             interposes[ninterposes].name = pair.name;
             interposes[ninterposes].replaced = &pair.applied;
-            if (auto loaded = dlsym(dylilbHandle, pair.name))
+            if (auto loaded = dlsym(dylilbHandle, pair.name)) {
                 interposes[ninterposes++].replacement = loaded;
+                previous[pair.name] = loaded;
+            }
             else
                 fprintf(output,
                         __FILE__ " Could not lookup %s in %s\n",
                         pair.name, nmCommand.c_str());
         }
 
-        rebind_symbols(interposes, ninterposes);
+        rebind_symbols(interposes.data(), ninterposes);
 
-        bool log = getenv("LOG_INTERPOSES") != nullptr;
+        bool log = getenv("LOG_INTERPOSES") != nullptr ||
+                   getenv("INJECTION_DETAIL") != nullptr;
         for (int i=0; i<ninterposes; i++)
             if (*interposes[i].replaced && ++napplied && log)
                 fprintf(output, "  Interposed %s\n",
@@ -105,7 +124,6 @@ int dyload_patches() {
 
         for (auto &pair : dylibSymbols)
             free(pair.name);
-        free(interposes);
         pclose(interposableSymbols);
     }
 

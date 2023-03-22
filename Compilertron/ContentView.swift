@@ -21,7 +21,7 @@ struct ContentView: View {
             if let active = state.active {
                 Text(active)
             } else {
-                Text("Hello, world!")
+                Text("Watching for source file changes...")
             }
             if let log = state.log {
                 Text("Log: \(log)")
