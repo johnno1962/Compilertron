@@ -68,7 +68,7 @@ int dyload_patches() {
             continue;
         }
 
-        std::vector<rebinding> interposes;
+        static rebinding interposes[100000];
         int ninterposes = 0, napplied = 0;
         for (auto &pair : previous) {
             interposes[ninterposes].name = pair.first.c_str();
@@ -78,7 +78,7 @@ int dyload_patches() {
 
         rebind_symbols_image((void *)_dyld_get_image_header(lastImage),
                              _dyld_get_image_vmaddr_slide(lastImage),
-                             interposes.data(), ninterposes);
+                             interposes, ninterposes);
 
         std::string dylibstr = patchDylib;
         auto nmCommand = "nm '"+dylibstr+"' | grep 'T __Z'";
@@ -108,7 +108,7 @@ int dyload_patches() {
                         pair.name, nmCommand.c_str());
         }
 
-        rebind_symbols(interposes.data(), ninterposes);
+        rebind_symbols(interposes, ninterposes);
 
         bool log = getenv("LOG_INTERPOSES") != nullptr ||
                    getenv("INJECTION_DETAIL") != nullptr;
