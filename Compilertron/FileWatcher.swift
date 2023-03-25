@@ -18,7 +18,7 @@ public class FileWatcher: NSObject {
     public typealias InjectionCallback = (
         _ filesChanged: NSArray, _ ideProcPath: String) -> Void
     static var INJECTABLE_PATTERN = try! NSRegularExpression(
-        pattern: "[^~]\\.(mm?|cpp|swift|storyboard|xib)$")
+        pattern: "[^~]\\.cpp$")
     static let logsPref = "HotReloadingBuildLogsDir"
     static var derivedLog =
         UserDefaults.standard.string(forKey: logsPref) {

@@ -23,6 +23,7 @@ class Recompiler: ObservableObject {
     lazy var commandCache = NSMutableDictionary(contentsOfFile: diskCache) ??
                             NSMutableDictionary()
     let queue = DispatchQueue(label: "recompilations")
+    var lastError: String?
 
     func recompile(sourceFile: String) {
         guard var compilationCommand =
@@ -43,19 +44,37 @@ class Recompiler: ObservableObject {
                 of: #" -o [^\s\\]*(?:\\.[^\s\\]*)* "#,
                 with: " -o \(objectFile) ",
                 options: .regularExpression)
+            .replacingOccurrences(of: "-fdiagnostics-color", with: "")
         print(compilationCommand)
 
         let errs = popen(compilationCommand+" 2>&1", "r")
             .readAll(close: true)
         guard !errs.contains("error:") else {
-            commandCache.removeObject(forKey: sourceFile)
-            commandCache.write(toFile: diskCache, atomically: true)
+            if lastError == sourceFile {
+                commandCache.removeObject(forKey: sourceFile)
+                commandCache.write(toFile: diskCache, atomically: true)
+            } else {
+                lastError = sourceFile
+            }
             DispatchQueue.main.sync {
-                NSApp.dockTile.badgeLabel = "🤷"
                 active? += "\n"+errs
+                NSApp.activate(ignoringOtherApps: true)
+//                let alert = NSAlert()
+//                alert.messageText = "Compilertron"
+//                alert.informativeText = """
+//                    Compilaton failed. If it fails again, \
+//                    the compilation command entry for \
+//                    this source file will be removed.
+//                    """
+//                alert.alertStyle = NSAlert.Style.warning
+//                alert.addButton(withTitle: "OK")
+//                _ = alert.runModal()
+                NSApp.dockTile.badgeLabel = "🤷"
             }
             return
         }
+        lastError = nil
+
         if commandCache[sourceFile] as? String != compilationCommand {
             commandCache[sourceFile] = compilationCommand
             commandCache.write(toFile: diskCache, atomically: true)
