@@ -16,6 +16,7 @@
 		BBA0E240292A9E0C00A7E1B5 /* Recompiler.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBA0E23F292A9E0C00A7E1B5 /* Recompiler.swift */; };
 		BBA0E247292AB6BC00A7E1B5 /* compilertron.cpp in Sources */ = {isa = PBXBuildFile; fileRef = BBA0E245292AB6BC00A7E1B5 /* compilertron.cpp */; };
 		BBA0E249292B909700A7E1B5 /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = BBA0E248292B909700A7E1B5 /* README.md */; };
+		BBBE8D8429D56E8A00AEE5A2 /* LICENSE in Resources */ = {isa = PBXBuildFile; fileRef = BBBE8D8329D56E8A00AEE5A2 /* LICENSE */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -33,6 +34,8 @@
 		BBA0E245292AB6BC00A7E1B5 /* compilertron.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = compilertron.cpp; sourceTree = "<group>"; };
 		BBA0E246292AB6BC00A7E1B5 /* compilertron.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = compilertron.hpp; sourceTree = "<group>"; };
 		BBA0E248292B909700A7E1B5 /* README.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
+		BBBE8D8329D56E8A00AEE5A2 /* LICENSE */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = LICENSE; sourceTree = "<group>"; };
+		BBF2C3042C25C87900EC6D88 /* mixer.pl */ = {isa = PBXFileReference; lastKnownFileType = text.script.perl; path = mixer.pl; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -51,6 +54,8 @@
 			isa = PBXGroup;
 			children = (
 				BBA0E248292B909700A7E1B5 /* README.md */,
+				BBBE8D8329D56E8A00AEE5A2 /* LICENSE */,
+				BBF2C3042C25C87900EC6D88 /* mixer.pl */,
 				BBA0E22D292A4FDF00A7E1B5 /* Compilertron */,
 				BBA0E22C292A4FDF00A7E1B5 /* Products */,
 			);
@@ -158,6 +163,7 @@
 			files = (
 				BBA0E249292B909700A7E1B5 /* README.md in Resources */,
 				BBA0E236292A4FE000A7E1B5 /* Preview Assets.xcassets in Resources */,
+				BBBE8D8429D56E8A00AEE5A2 /* LICENSE in Resources */,
 				BBA0E233292A4FE000A7E1B5 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

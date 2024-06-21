@@ -37,8 +37,28 @@ static time_t timeModified(const char *path) {
     return stat(path, &s) == 0 ? s.st_mtimespec.tv_sec : 0;
 }
 
+FILE *compilertronLOG;
+
+FILE *dyLOG() {
+    if (!compilertronLOG) {
+        compilertronLOG = fopen("/tmp/compilertron.log", "a+");
+        setbuf(compilertronLOG, NULL);
+    }
+    return compilertronLOG;
+}
+
+int dyprintf(const char *fmt, ...) {
+    va_list al;
+    va_start(al, fmt);
+    int bytes = vfprintf(dyLOG(), fmt, al);
+    va_end(al);
+    return bytes;
+}
+
 int dyload_patches() {
-    FILE *output = stderr;
+    FILE *output = dyLOG();
+    if (!output)
+        output = stderr;
     void *main = dlsym(RTLD_SELF, "main");
     if (!main)
         ERROR("Could not lookup main\n");
@@ -47,8 +67,8 @@ int dyload_patches() {
         ERROR("Could not locate main\n");
     time_t lastBuilt = timeModified(execInfo.dli_fname);
 
-    fprintf(output, "dyload_patches( %s )\n", execInfo.dli_fname);
-    FILE *patchDylibs = popen("ls -rt " COMPILERTRON_PATCHES, "r");
+    fprintf(output, "\ndyload_patches(\"%s\")\n", execInfo.dli_fname);
+    FILE *patchDylibs = popen("ls -rt 2>/dev/null " COMPILERTRON_PATCHES, "r");
     if (!patchDylibs)
         ERROR("Could not list patches\n");
     static char lineBuff[100*1024];
@@ -63,8 +83,7 @@ int dyload_patches() {
         auto lastImage = _dyld_image_count();
         void *dylilbHandle = dlopen(patchDylib, RTLD_NOW);
         if (!dylilbHandle) {
-            fprintf(output, __FILE__ " dlopen %s failed %s\n",
-                    patchDylib, dlerror());
+            fprintf(output, __FILE__ " Failed %s\n", dlerror());
             continue;
         }
 
@@ -110,7 +129,8 @@ int dyload_patches() {
 
         rebind_symbols(interposes, ninterposes);
 
-        bool log = getenv("LOG_INTERPOSES") != nullptr ||
+        bool log = output != stderr || 
+                   getenv("LOG_INTERPOSES") != nullptr ||
                    getenv("INJECTION_DETAIL") != nullptr;
         for (int i=0; i<ninterposes; i++)
             if (*interposes[i].replaced && ++napplied && log)
