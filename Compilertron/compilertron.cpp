@@ -50,9 +50,9 @@ FILE *dyLOG() {
 int dyprintf(const char *fmt, ...) {
     va_list al;
     va_start(al, fmt);
-    int bytes = vfprintf(dyLOG(), fmt, al);
+    vfprintf(dyLOG(), fmt, al);
     va_end(al);
-    return bytes;
+    return 1;
 }
 
 int dyload_patches() {

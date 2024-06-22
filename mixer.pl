@@ -4,32 +4,35 @@
 # processes on the CPU to stop memory & disk "thrashing".
 # It can be useful to run this script alongside a full
 # toolchain build on a machine that has limited memory.
-# If your build stalls you can restart this script.
+# Should your build stall you can restart this script.
 #
 use strict;
 
 my $maxActive = $ARGV[0] || 5;
 my %stopped;
 
+sub nextProcess {
+    return (<PS>||"") =~ /(\w+) +(\d+) +([\d\.]+) +([\d\.]+)/
+}
+
+LOOP:
 while (1) {
-    open PS, "ps auxww | grep swift-frontend |";
-    my $nextProcess = sub  {
-        return (<PS>||"") =~ /(\w+) +(\d+) +([\d\.]+) +([\d\.]+)/
-    };
+    warn "Stopped processes: @{[sort keys %stopped]}\n";
+    open PS, "ps auxww | grep swift-frontend | grep -v grep |";
     
     for my $i (1..$maxActive) {
-        my ($user, $pid, $cpu, $mem) = $nextProcess->() or last;
+        my ($user, $pid, $cpu, $mem) = nextProcess();
+        if (!$pid) { sleep 15; next LOOP; }
         warn "Continuing $pid\n";
         system "kill -CONT $pid";
         delete $stopped{$pid};
     }
     
-    while (my ($user, $pid, $cpu, $mem) = $nextProcess->()) {
+    while (my ($user, $pid, $cpu, $mem) = nextProcess()) {
         warn "Stopping $pid\n";
         system "kill -STOP $pid";
         $stopped{$pid} = 1;
     }
     
-    warn "Stopped processes: @{[sort keys %stopped]}\n";
     sleep 15;
 }

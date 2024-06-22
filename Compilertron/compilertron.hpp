@@ -17,6 +17,11 @@ extern "C" {
 extern int dyload_patches();
 extern FILE *compilertronLOG, *dyLOG();
 extern int dyprintf(const char *fmt, ...);
+#if INJECTING
+#define DYLOG dyprintf
+#else
+#define DYLOG(...) 1
+#endif
 #ifdef __cplusplus
 }
 #endif
